@@ -12,6 +12,7 @@ const server = await createServer({
   },
   server: {
     port: 5173,
+    strictPort: true,
     proxy: {
       "/api": {
         target: "http://localhost:4000",

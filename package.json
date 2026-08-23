@@ -1,0 +1,14 @@
+{
+  "name": "raj-ply-lam",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "npm --prefix server run build && npm --prefix client run build",
+    "server:dev": "npm --prefix server run dev",
+    "client:dev": "npm --prefix client run dev"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}
