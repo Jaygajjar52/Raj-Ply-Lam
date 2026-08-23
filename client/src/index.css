@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --wood: #1b120b;
+  --wood-light: #2d1e16;
+  --beige: #f5e6d3;
+  --gold: #d4af37;
+  --gold-light: #e9cb6b;
+  --cream: #fff8ee;
+}
+
+* {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  background-color: var(--wood);
+  color: var(--cream);
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-display {
+  font-family: "Playfair Display", serif;
+}
+
+::selection {
+  background-color: var(--gold);
+  color: var(--wood);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--wood);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--gold-dark, #a8842a);
+  border-radius: 8px;
+}
+
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(245, 230, 211, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+}
+
+.glass-nav {
+  background: rgba(27, 18, 11, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Gold gradient text */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #e9cb6b 0%, #d4af37 50%, #a8842a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Gradient CTA button */
+.btn-gold {
+  background: linear-gradient(135deg, #e9cb6b 0%, #d4af37 55%, #a8842a 100%);
+  color: #1b120b;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+}
+.btn-gold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(212, 175, 55, 0.35);
+  filter: brightness(1.05);
+}
+
+.btn-outline-gold {
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
+  color: var(--cream);
+  transition: all 0.25s ease;
+}
+.btn-outline-gold:hover {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: var(--gold);
+}
+
+/* Section eyebrow */
+.eyebrow {
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: var(--gold-light);
+}
+
+/* Focus visibility for accessibility */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
