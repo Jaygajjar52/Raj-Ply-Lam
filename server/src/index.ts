@@ -8,10 +8,9 @@ import { adminRouter } from "./routes/admin.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const ALLOWED_ORIGINS = (process.env.CLIENT_ORIGIN || "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const ALLOWED_ORIGINS = getAllowedOrigins();
+
+validateProductionEnv();
 
 app.set("trust proxy", 1);
 app.use(helmet());
@@ -48,6 +47,46 @@ app.use((req, res) => {
   res.status(404).json({ ok: false, message: "Not found." });
 });
 
+app.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (error.message === "Not allowed by CORS") {
+    return res.status(403).json({
+      ok: false,
+      message: "This website origin is not allowed to access the API. Check CLIENT_ORIGIN on the backend.",
+    });
+  }
+
+  return res.status(500).json({ ok: false, message: "Internal server error." });
+});
+
 app.listen(PORT, () => {
   console.log(`Raj Ply Lam API running on http://localhost:${PORT}`);
 });
+
+function getAllowedOrigins() {
+  return (process.env.CLIENT_ORIGIN || "http://localhost:5173")
+    .split(",")
+    .map((origin) => normalizeOrigin(origin))
+    .filter(Boolean);
+}
+
+function normalizeOrigin(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed.replace(/\/+$/, "");
+  }
+}
+
+function validateProductionEnv() {
+  if (process.env.NODE_ENV !== "production") return;
+
+  const required = ["DATABASE_URL", "ADMIN_PHONE", "ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "CLIENT_ORIGIN"];
+  const missing = required.filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required production environment variables: ${missing.join(", ")}`);
+  }
+}

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ApiConnectionError, buildApiUrl, readJsonResponse } from "./api-config";
 
 export const inquirySchema = z.object({
   fullName: z.string().trim().min(3, "Please enter at least 3 characters."),
@@ -15,16 +16,20 @@ export const inquirySchema = z.object({
 
 export type InquiryInput = z.infer<typeof inquirySchema>;
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
-
 export async function submitInquiry(data: InquiryInput) {
-  const res = await fetch(`${API_BASE}/inquiry`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
+  let res: Response;
 
-  const json = await res.json().catch(() => ({}));
+  try {
+    res = await fetch(buildApiUrl("/inquiry"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  } catch {
+    throw new ApiConnectionError();
+  }
+
+  const json = await readJsonResponse(res);
 
   if (!res.ok) {
     throw new Error(json?.message || "Something went wrong. Please try again.");

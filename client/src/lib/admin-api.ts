@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
+import { ApiConnectionError, buildApiUrl, readJsonResponse } from "./api-config";
+
 const ADMIN_TOKEN_STORAGE_KEY = "rajplylam_admin_token";
 
 export interface AdminInquiry {
@@ -37,17 +38,23 @@ interface AdminMeResponse {
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getStoredAdminToken();
-  const res = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers || {}),
-    },
-  });
+  let res: Response;
 
-  const json = await res.json().catch(() => ({}));
+  try {
+    res = await fetch(buildApiUrl(path), {
+      credentials: "include",
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init?.headers || {}),
+      },
+    });
+  } catch {
+    throw new ApiConnectionError();
+  }
+
+  const json = await readJsonResponse(res);
   if (!res.ok) {
     if (res.status === 401) {
       clearStoredAdminToken();
