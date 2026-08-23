@@ -3,14 +3,17 @@ import { useNavigate } from "react-router-dom";
 import {
   adminLogin,
   adminLogout,
-  fetchAllAdminInquiries,
   fetchAdminMe,
+  fetchAdminInquiries,
   AdminInquiry,
 } from "@/lib/admin-api";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Section";
-import { ArrowLeft, Lock, LogOut, RefreshCw, Search, Shield, Table2 } from "lucide-react";
+import { ArrowLeft, Clock3, Lock, LogOut, RefreshCw, Search, Shield, Table2, UserRound } from "lucide-react";
 import { cn } from "@/lib/cn";
+
+const ADMIN_NAME = "Naresh Gajjar";
+const INQUIRY_PAGE_SIZE = 50;
 
 export function AdminPage() {
   const navigate = useNavigate();
@@ -21,6 +24,8 @@ export function AdminPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [isLoadingInquiries, setIsLoadingInquiries] = useState(false);
+  const [hasMoreInquiries, setHasMoreInquiries] = useState(false);
   const [form, setForm] = useState({ phone: "", password: "" });
 
   async function loadSession() {
@@ -31,9 +36,13 @@ export function AdminPage() {
       setSessionPhone(me.admin.phone);
 
       try {
-        setInquiries(await fetchAllAdminInquiries());
+        setIsLoadingInquiries(true);
+        const payload = await fetchAdminInquiries(0, INQUIRY_PAGE_SIZE);
+        setInquiries(payload.inquiries);
+        setHasMoreInquiries(payload.meta.hasMore);
       } catch (inquiryError) {
         setInquiries([]);
+        setHasMoreInquiries(false);
         setError(
           inquiryError instanceof Error
             ? inquiryError.message
@@ -44,8 +53,10 @@ export function AdminPage() {
     } catch {
       setSessionPhone(null);
       setInquiries([]);
+      setHasMoreInquiries(false);
       return false;
     } finally {
+      setIsLoadingInquiries(false);
       setLoading(false);
     }
   }
@@ -65,7 +76,7 @@ export function AdminPage() {
       setForm({ phone: "", password: "" });
       const hasSession = await loadSession();
       if (hasSession) {
-        setStatus("Logged in.");
+        setStatus("Latest inquiries loaded.");
       } else {
         setError("Login succeeded, but the admin session could not be saved. Check the server cookie settings.");
       }
@@ -83,6 +94,7 @@ export function AdminPage() {
       await adminLogout();
       setSessionPhone(null);
       setInquiries([]);
+      setHasMoreInquiries(false);
       setStatus("Logged out.");
     } catch (logoutError) {
       setError(logoutError instanceof Error ? logoutError.message : "Logout failed.");
@@ -93,13 +105,34 @@ export function AdminPage() {
 
   async function handleRefresh() {
     setIsBusy(true);
+    setIsLoadingInquiries(true);
     setError(null);
     try {
-      setInquiries(await fetchAllAdminInquiries());
-      setStatus("Inbox refreshed.");
+      const payload = await fetchAdminInquiries(0, INQUIRY_PAGE_SIZE);
+      setInquiries(payload.inquiries);
+      setHasMoreInquiries(payload.meta.hasMore);
+      setStatus("Latest inquiries refreshed.");
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : "Refresh failed.");
     } finally {
+      setIsLoadingInquiries(false);
+      setIsBusy(false);
+    }
+  }
+
+  async function handleLoadMore() {
+    setIsBusy(true);
+    setIsLoadingInquiries(true);
+    setError(null);
+    try {
+      const payload = await fetchAdminInquiries(inquiries.length, INQUIRY_PAGE_SIZE);
+      setInquiries((current) => [...current, ...payload.inquiries]);
+      setHasMoreInquiries(payload.meta.hasMore);
+      setStatus(`Loaded ${payload.inquiries.length} more inquiries.`);
+    } catch (loadMoreError) {
+      setError(loadMoreError instanceof Error ? loadMoreError.message : "Could not load more inquiries.");
+    } finally {
+      setIsLoadingInquiries(false);
       setIsBusy(false);
     }
   }
@@ -150,16 +183,23 @@ export function AdminPage() {
             Back to website
           </button>
         </Container>
-        <Container className="py-10 md:py-16">
-          <div className="max-w-md border border-gold/20 bg-wood-light/80 p-6 md:p-8 rounded-xl">
-            <div className="flex items-center gap-3 mb-5">
-              <Shield className="text-gold" size={20} />
-              <h1 className="font-display text-3xl font-semibold">Admin access</h1>
+        <Container className="py-8 md:py-14">
+          <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-gold/20 bg-wood-light/85 shadow-2xl shadow-black/20">
+            <div className="border-b border-gold/10 bg-gold/10 px-6 py-5 md:px-8">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-gold/30 bg-wood text-gold">
+                  <Shield size={20} />
+                </span>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-gold-light">Private access</p>
+                  <h1 className="font-display text-3xl font-semibold">Admin login</h1>
+                </div>
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-beige/75">
+                Welcome back. Enter your mobile number and password to open the inquiry dashboard.
+              </p>
             </div>
-            <p className="text-sm text-beige/70 leading-relaxed mb-6">
-              Log in with your mobile number and password to view every saved customer inquiry.
-            </p>
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <form onSubmit={handleLoginSubmit} className="space-y-4 p-6 md:p-8">
               <div>
                 <label className="block text-xs uppercase tracking-[0.2em] text-gold-light mb-2">
                   Mobile number
@@ -167,7 +207,7 @@ export function AdminPage() {
                 <input
                   value={form.phone}
                   onChange={(e) => setForm((current) => ({ ...current, phone: e.target.value }))}
-                  className="w-full rounded-lg border border-gold/20 bg-wood px-4 py-3 text-cream placeholder:text-beige/40"
+                  className="w-full rounded-xl border border-gold/20 bg-wood px-4 py-3 text-cream outline-none placeholder:text-beige/40 focus:border-gold/60 focus:ring-2 focus:ring-gold/15"
                   placeholder="Enter admin mobile"
                   inputMode="numeric"
                   autoComplete="tel"
@@ -181,7 +221,7 @@ export function AdminPage() {
                 <input
                   value={form.password}
                   onChange={(e) => setForm((current) => ({ ...current, password: e.target.value }))}
-                  className="w-full rounded-lg border border-gold/20 bg-wood px-4 py-3 text-cream placeholder:text-beige/40"
+                  className="w-full rounded-xl border border-gold/20 bg-wood px-4 py-3 text-cream outline-none placeholder:text-beige/40 focus:border-gold/60 focus:ring-2 focus:ring-gold/15"
                   placeholder="Enter admin password"
                   type="password"
                   autoComplete="current-password"
@@ -192,7 +232,7 @@ export function AdminPage() {
               {status && <p className="text-sm text-gold-light">{status}</p>}
               <Button type="submit" className="w-full" disabled={isBusy}>
                 <Lock size={16} />
-                Login and View Inquiries
+                {isBusy ? "Loading inquiries..." : "Login and View Inquiries"}
               </Button>
             </form>
           </div>
@@ -204,24 +244,40 @@ export function AdminPage() {
   return (
     <div className="min-h-screen bg-wood text-cream">
       <Container className="py-5 md:py-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gold/10 pb-5">
-          <div>
-            <div className="flex items-center gap-2 text-gold-light text-xs uppercase tracking-[0.2em] mb-2">
-              <Table2 size={14} />
-              Private dashboard
+        <div className="rounded-2xl border border-gold/15 bg-wood-light/75 p-5 shadow-xl shadow-black/10 md:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-gold-light text-xs uppercase tracking-[0.2em] mb-2">
+                <UserRound size={14} />
+                Owner dashboard
+              </div>
+              <h1 className="font-display text-3xl font-semibold leading-tight md:text-5xl">
+                Hey {ADMIN_NAME}, welcome back
+              </h1>
+              <p className="mt-2 text-sm text-beige/70">Signed in with {sessionPhone}.</p>
             </div>
-            <h1 className="font-display text-3xl md:text-4xl font-semibold">Customer inquiries</h1>
-            <p className="text-sm text-beige/65 mt-2">Signed in as {sessionPhone}.</p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={handleRefresh} disabled={isBusy}>
+                <RefreshCw size={16} className={cn(isLoadingInquiries && "animate-spin")} />
+                {isLoadingInquiries ? "Loading" : "Refresh"}
+              </Button>
+              <Button variant="ghost" onClick={handleLogout} disabled={isBusy}>
+                <LogOut size={16} />
+                Logout
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleRefresh} disabled={isBusy}>
-              <RefreshCw size={16} />
-              Refresh
-            </Button>
-            <Button variant="ghost" onClick={handleLogout} disabled={isBusy}>
-              <LogOut size={16} />
-              Logout
-            </Button>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-gold/10 pt-4 text-sm text-beige/70">
+            <span className="inline-flex items-center gap-2">
+              <Table2 size={15} className="text-gold" />
+              Customer inquiries
+            </span>
+            <span className="hidden h-1 w-1 rounded-full bg-gold/50 sm:inline-block" />
+            <span className="inline-flex items-center gap-2">
+              <Clock3 size={15} className="text-gold" />
+              Last checked {formatDateTime(new Date().toISOString())}
+            </span>
           </div>
         </div>
       </Container>
@@ -233,14 +289,25 @@ export function AdminPage() {
           <Metric label="With email" value={summary.withEmail} />
         </div>
 
-        <div className="mb-5 relative max-w-xl">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-beige/50" size={16} />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, phone, product, message"
-            className="w-full rounded-xl border border-gold/15 bg-wood-light/80 pl-11 pr-4 py-3 text-sm text-cream placeholder:text-beige/40"
-          />
+        <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-gold/15 bg-wood-light/70 p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-gold-light text-xs uppercase tracking-[0.2em] mb-2">
+              <Table2 size={14} />
+              Inquiry inbox
+            </div>
+            <p className="text-sm text-beige/70">
+              Showing latest {inquiries.length} inquiries first for faster mobile loading.
+            </p>
+          </div>
+          <div className="relative w-full md:max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-beige/50" size={16} />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, phone, product, message"
+              className="w-full rounded-xl border border-gold/15 bg-wood pl-11 pr-4 py-3 text-sm text-cream outline-none placeholder:text-beige/40 focus:border-gold/60 focus:ring-2 focus:ring-gold/15"
+            />
+          </div>
         </div>
 
         {error && <p className="mb-4 text-sm text-red-300">{error}</p>}
@@ -249,7 +316,7 @@ export function AdminPage() {
         <div className="space-y-4">
           {filtered.length === 0 ? (
             <div className="border border-gold/15 bg-wood-light/70 rounded-xl p-6 text-sm text-beige/70">
-              No inquiries found.
+              {isLoadingInquiries ? "Loading inquiries..." : "No inquiries found."}
             </div>
           ) : (
             filtered.map((item) => (
@@ -287,6 +354,15 @@ export function AdminPage() {
             ))
           )}
         </div>
+
+        {hasMoreInquiries && !query.trim() && (
+          <div className="mt-6 flex justify-center">
+            <Button variant="outline" onClick={handleLoadMore} disabled={isBusy}>
+              <RefreshCw size={16} className={cn(isLoadingInquiries && "animate-spin")} />
+              {isLoadingInquiries ? "Loading more..." : "Load more inquiries"}
+            </Button>
+          </div>
+        )}
       </Container>
     </div>
   );
@@ -294,7 +370,7 @@ export function AdminPage() {
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="border border-gold/15 bg-wood-light/70 rounded-xl px-5 py-4">
+    <div className="border border-gold/15 bg-wood-light/70 rounded-2xl px-5 py-4 shadow-lg shadow-black/10">
       <p className="text-xs uppercase tracking-[0.2em] text-gold-light">{label}</p>
       <p className="mt-2 font-display text-3xl font-semibold">{value}</p>
     </div>
