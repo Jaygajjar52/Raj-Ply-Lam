@@ -58,7 +58,7 @@ export function verifyAdminToken(token: string | undefined | null) {
 }
 
 export function readAdminSession(req: Request) {
-  const token = readCookie(req.headers.cookie || "", COOKIE_NAME);
+  const token = readBearerToken(req.headers.authorization) || readCookie(req.headers.cookie || "", COOKIE_NAME);
   return verifyAdminToken(token);
 }
 
@@ -136,6 +136,11 @@ function readCookie(cookieHeader: string, name: string) {
   return entry ? decodeURIComponent(entry.slice(name.length + 1)) : null;
 }
 
+function readBearerToken(authorizationHeader: string | undefined) {
+  if (!authorizationHeader?.startsWith("Bearer ")) return null;
+  return authorizationHeader.slice("Bearer ".length).trim() || null;
+}
+
 function getAdminPhone() {
   return normalizePhone(process.env.ADMIN_PHONE || "");
 }
@@ -152,6 +157,11 @@ function getCookieSameSite() {
   const configured = process.env.ADMIN_COOKIE_SAMESITE;
 
   if (configured === "Strict" || configured === "Lax" || configured === "None") {
+    if (configured === "None" && process.env.NODE_ENV !== "production") {
+      logger.warn("ADMIN_COOKIE_SAMESITE=None requires HTTPS; using Lax outside production.");
+      return "Lax";
+    }
+
     return configured;
   }
 

@@ -33,7 +33,7 @@ export async function handleAdminLogin(req: Request, res: Response) {
     }
 
     res.setHeader("Set-Cookie", buildSessionCookie(token));
-    return res.json({ ok: true });
+    return res.json({ ok: true, token });
   } catch (error) {
     logger.error("Admin login misconfigured", {
       error: error instanceof Error ? error.message : String(error),

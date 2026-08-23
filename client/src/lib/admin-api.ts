@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
+const ADMIN_TOKEN_STORAGE_KEY = "rajplylam_admin_token";
 
 export interface AdminInquiry {
   id: string;
@@ -35,32 +36,45 @@ interface AdminMeResponse {
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getStoredAdminToken();
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers || {}),
     },
   });
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401) {
+      clearStoredAdminToken();
+    }
+
     throw new Error(json?.message || "Request failed.");
   }
 
   return json as T;
 }
 
-export function adminLogin(phone: string, password: string) {
-  return requestJson<{ ok: true }>("/admin/login", {
+export async function adminLogin(phone: string, password: string) {
+  const payload = await requestJson<{ ok: true; token: string }>("/admin/login", {
     method: "POST",
     body: JSON.stringify({ phone, password }),
   });
+
+  storeAdminToken(payload.token);
+  return payload;
 }
 
-export function adminLogout() {
-  return requestJson<{ ok: true }>("/admin/logout", { method: "POST" });
+export async function adminLogout() {
+  try {
+    return await requestJson<{ ok: true }>("/admin/logout", { method: "POST" });
+  } finally {
+    clearStoredAdminToken();
+  }
 }
 
 export function fetchAdminMe() {
@@ -87,5 +101,29 @@ export async function fetchAllAdminInquiries() {
     }
 
     skip += limit;
+  }
+}
+
+function getStoredAdminToken() {
+  try {
+    return window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeAdminToken(token: string) {
+  try {
+    window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
+  } catch {
+    // The cookie session can still work when storage is unavailable.
+  }
+}
+
+function clearStoredAdminToken() {
+  try {
+    window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+  } catch {
+    // Nothing to clear when storage is unavailable.
   }
 }

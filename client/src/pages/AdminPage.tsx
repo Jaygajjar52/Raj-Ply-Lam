@@ -29,10 +29,22 @@ export function AdminPage() {
     try {
       const me = await fetchAdminMe();
       setSessionPhone(me.admin.phone);
-      setInquiries(await fetchAllAdminInquiries());
+
+      try {
+        setInquiries(await fetchAllAdminInquiries());
+      } catch (inquiryError) {
+        setInquiries([]);
+        setError(
+          inquiryError instanceof Error
+            ? inquiryError.message
+            : "Could not load inquiries. Please try refreshing."
+          );
+      }
+      return true;
     } catch {
       setSessionPhone(null);
       setInquiries([]);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -50,9 +62,13 @@ export function AdminPage() {
 
     try {
       await adminLogin(form.phone, form.password);
-      setStatus("Logged in.");
       setForm({ phone: "", password: "" });
-      await loadSession();
+      const hasSession = await loadSession();
+      if (hasSession) {
+        setStatus("Logged in.");
+      } else {
+        setError("Login succeeded, but the admin session could not be saved. Check the server cookie settings.");
+      }
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Login failed.");
     } finally {
