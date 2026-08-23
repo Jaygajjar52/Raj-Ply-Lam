@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ApiConnectionError, buildApiUrl, readJsonResponse } from "./api-config";
+import { ApiConnectionError, fetchApi, readJsonResponse } from "./api-config";
 
 export const inquirySchema = z.object({
   fullName: z.string().trim().min(3, "Please enter at least 3 characters."),
@@ -20,7 +20,7 @@ export async function submitInquiry(data: InquiryInput) {
   let res: Response;
 
   try {
-    res = await fetch(buildApiUrl("/inquiry"), {
+    res = await fetchApi("/inquiry", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),

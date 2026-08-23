@@ -1,4 +1,4 @@
-import { ApiConnectionError, buildApiUrl, readJsonResponse } from "./api-config";
+import { ApiConnectionError, fetchApi, readJsonResponse } from "./api-config";
 
 const ADMIN_TOKEN_STORAGE_KEY = "rajplylam_admin_token";
 
@@ -25,6 +25,7 @@ interface AdminInquiryResponse {
   meta: {
     limit: number;
     skip: number;
+    total: number;
     hasMore: boolean;
   };
 }
@@ -41,7 +42,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
 
   try {
-    res = await fetch(buildApiUrl(path), {
+    res = await fetchApi(path, {
       credentials: "include",
       ...init,
       headers: {

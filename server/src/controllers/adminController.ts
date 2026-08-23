@@ -74,11 +74,14 @@ export async function handleAdminInquiries(req: Request, res: Response) {
   const limit = clampInt(req.query.limit, 100, 1, 500);
   const skip = clampInt(req.query.skip, 0, 0, 10000);
 
-  const inquiries = await prisma.inquiry.findMany({
-    orderBy: { addDate: "desc" },
-    take: limit,
-    skip,
-  });
+  const [inquiries, total] = await prisma.$transaction([
+    prisma.inquiry.findMany({
+      orderBy: { addDate: "desc" },
+      take: limit,
+      skip,
+    }),
+    prisma.inquiry.count(),
+  ]);
 
   return res.json({
     ok: true,
@@ -86,7 +89,8 @@ export async function handleAdminInquiries(req: Request, res: Response) {
     meta: {
       limit,
       skip,
-      hasMore: inquiries.length === limit,
+      total,
+      hasMore: skip + inquiries.length < total,
     },
   });
 }

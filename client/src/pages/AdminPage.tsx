@@ -9,7 +9,19 @@ import {
 } from "@/lib/admin-api";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Section";
-import { ArrowLeft, Clock3, Lock, LogOut, RefreshCw, Search, Shield, Table2, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Lock,
+  LogOut,
+  RefreshCw,
+  Search,
+  Shield,
+  Table2,
+  UserRound,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const ADMIN_NAME = "Naresh Gajjar";
@@ -25,8 +37,32 @@ export function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isLoadingInquiries, setIsLoadingInquiries] = useState(false);
-  const [hasMoreInquiries, setHasMoreInquiries] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalInquiries, setTotalInquiries] = useState(0);
   const [form, setForm] = useState({ phone: "", password: "" });
+
+  async function loadInquiries(page: number, successMessage?: string) {
+    const nextPage = Math.max(1, page);
+    setIsLoadingInquiries(true);
+    const payload = await fetchAdminInquiries((nextPage - 1) * INQUIRY_PAGE_SIZE, INQUIRY_PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(payload.meta.total / INQUIRY_PAGE_SIZE));
+    const safePage = Math.min(nextPage, totalPages);
+
+    if (safePage !== nextPage) {
+      const safePayload = await fetchAdminInquiries((safePage - 1) * INQUIRY_PAGE_SIZE, INQUIRY_PAGE_SIZE);
+      setInquiries(safePayload.inquiries);
+      setTotalInquiries(safePayload.meta.total);
+      setCurrentPage(safePage);
+    } else {
+      setInquiries(payload.inquiries);
+      setTotalInquiries(payload.meta.total);
+      setCurrentPage(nextPage);
+    }
+
+    if (successMessage) {
+      setStatus(successMessage);
+    }
+  }
 
   async function loadSession() {
     setLoading(true);
@@ -36,13 +72,11 @@ export function AdminPage() {
       setSessionPhone(me.admin.phone);
 
       try {
-        setIsLoadingInquiries(true);
-        const payload = await fetchAdminInquiries(0, INQUIRY_PAGE_SIZE);
-        setInquiries(payload.inquiries);
-        setHasMoreInquiries(payload.meta.hasMore);
+        await loadInquiries(1);
       } catch (inquiryError) {
         setInquiries([]);
-        setHasMoreInquiries(false);
+        setTotalInquiries(0);
+        setCurrentPage(1);
         setError(
           inquiryError instanceof Error
             ? inquiryError.message
@@ -53,7 +87,8 @@ export function AdminPage() {
     } catch {
       setSessionPhone(null);
       setInquiries([]);
-      setHasMoreInquiries(false);
+      setTotalInquiries(0);
+      setCurrentPage(1);
       return false;
     } finally {
       setIsLoadingInquiries(false);
@@ -94,7 +129,8 @@ export function AdminPage() {
       await adminLogout();
       setSessionPhone(null);
       setInquiries([]);
-      setHasMoreInquiries(false);
+      setTotalInquiries(0);
+      setCurrentPage(1);
       setStatus("Logged out.");
     } catch (logoutError) {
       setError(logoutError instanceof Error ? logoutError.message : "Logout failed.");
@@ -105,13 +141,9 @@ export function AdminPage() {
 
   async function handleRefresh() {
     setIsBusy(true);
-    setIsLoadingInquiries(true);
     setError(null);
     try {
-      const payload = await fetchAdminInquiries(0, INQUIRY_PAGE_SIZE);
-      setInquiries(payload.inquiries);
-      setHasMoreInquiries(payload.meta.hasMore);
-      setStatus("Latest inquiries refreshed.");
+      await loadInquiries(currentPage, "Latest inquiries refreshed.");
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : "Refresh failed.");
     } finally {
@@ -120,17 +152,14 @@ export function AdminPage() {
     }
   }
 
-  async function handleLoadMore() {
+  async function handlePageChange(page: number) {
     setIsBusy(true);
-    setIsLoadingInquiries(true);
     setError(null);
+    setStatus(null);
     try {
-      const payload = await fetchAdminInquiries(inquiries.length, INQUIRY_PAGE_SIZE);
-      setInquiries((current) => [...current, ...payload.inquiries]);
-      setHasMoreInquiries(payload.meta.hasMore);
-      setStatus(`Loaded ${payload.inquiries.length} more inquiries.`);
-    } catch (loadMoreError) {
-      setError(loadMoreError instanceof Error ? loadMoreError.message : "Could not load more inquiries.");
+      await loadInquiries(page);
+    } catch (pageError) {
+      setError(pageError instanceof Error ? pageError.message : "Could not load that page.");
     } finally {
       setIsLoadingInquiries(false);
       setIsBusy(false);
@@ -160,8 +189,12 @@ export function AdminPage() {
     const withEmail = inquiries.filter((item) => item.email).length;
     const today = new Date().toDateString();
     const todayCount = inquiries.filter((item) => new Date(item.addDate).toDateString() === today).length;
-    return { total: inquiries.length, withEmail, todayCount };
-  }, [inquiries]);
+    return { total: totalInquiries, withEmail, todayCount };
+  }, [inquiries, totalInquiries]);
+
+  const totalPages = Math.max(1, Math.ceil(totalInquiries / INQUIRY_PAGE_SIZE));
+  const pageStart = totalInquiries === 0 ? 0 : (currentPage - 1) * INQUIRY_PAGE_SIZE + 1;
+  const pageEnd = Math.min(currentPage * INQUIRY_PAGE_SIZE, totalInquiries);
 
   if (loading) {
     return (
@@ -285,8 +318,8 @@ export function AdminPage() {
       <Container className="pb-10 md:pb-14">
         <div className="grid gap-4 md:grid-cols-3 mb-6">
           <Metric label="Total inquiries" value={summary.total} />
-          <Metric label="Today" value={summary.todayCount} />
-          <Metric label="With email" value={summary.withEmail} />
+          <Metric label="Today on page" value={summary.todayCount} />
+          <Metric label="With email on page" value={summary.withEmail} />
         </div>
 
         <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-gold/15 bg-wood-light/70 p-4 md:flex-row md:items-center md:justify-between">
@@ -296,7 +329,7 @@ export function AdminPage() {
               Inquiry inbox
             </div>
             <p className="text-sm text-beige/70">
-              Showing latest {inquiries.length} inquiries first for faster mobile loading.
+              Showing {pageStart}-{pageEnd} of {totalInquiries} inquiries.
             </p>
           </div>
           <div className="relative w-full md:max-w-md">
@@ -355,11 +388,32 @@ export function AdminPage() {
           )}
         </div>
 
-        {hasMoreInquiries && !query.trim() && (
-          <div className="mt-6 flex justify-center">
-            <Button variant="outline" onClick={handleLoadMore} disabled={isBusy}>
+        {!query.trim() && totalInquiries > INQUIRY_PAGE_SIZE && (
+          <div className="mt-6 flex flex-col items-center justify-between gap-3 rounded-xl border border-gold/15 bg-wood-light/70 px-4 py-3 sm:flex-row">
+            <p className="text-sm text-beige/70">
+              Page {currentPage} of {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={isBusy || currentPage <= 1}
+              >
+                <ChevronLeft size={16} />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={isBusy || currentPage >= totalPages}
+              >
+                Next
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+            <Button variant="ghost" onClick={() => handlePageChange(1)} disabled={isBusy || currentPage === 1}>
               <RefreshCw size={16} className={cn(isLoadingInquiries && "animate-spin")} />
-              {isLoadingInquiries ? "Loading more..." : "Load more inquiries"}
+              First page
             </Button>
           </div>
         )}
