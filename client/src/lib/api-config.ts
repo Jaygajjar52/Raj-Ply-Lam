@@ -23,7 +23,13 @@ export async function fetchApi(path: string, init?: RequestInit) {
 
   for (const base of bases) {
     try {
-      return await fetch(`${base}${safePath}`, init);
+      const response = await fetch(`${base}${safePath}`, init);
+
+      if (!isJsonResponse(response) && base !== bases[bases.length - 1]) {
+        continue;
+      }
+
+      return response;
     } catch (error) {
       lastError = error;
     }
@@ -50,6 +56,10 @@ function normalizeApiBase(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return DEFAULT_API_BASE;
   return trimmed.replace(/\/+$/, "");
+}
+
+function isJsonResponse(res: Response) {
+  return (res.headers.get("content-type") || "").toLowerCase().includes("application/json");
 }
 
 function getApiBases() {
