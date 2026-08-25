@@ -25,8 +25,9 @@ export const COMPANY = {
     { days: "Sunday", time: "10:00 AM – 2:00 PM" },
   ],
   mapsEmbedUrl:
-    "https://www.google.com/maps?q=HK+Complex+120+Feet+Ring+Road+Paldi+Ahmedabad&output=embed",
-  mapsUrl: "https://www.google.com/maps/place/Raj+Ply+Lam/@23.0064904,72.5488955,17z/data=!3m1!4b1!4m6!3m5!1s0x395e85d20217d655:0xd953b8004ba0b064!8m2!3d23.0064904!4d72.5514704!16s%2Fg%2F11q83hb5qn?entry=ttu&g_ep=EgoyMDI2MDcyOS4wIKXMDSoASAFQAw%3D%3D",
+    "https://www.google.com/maps?q=Raj+Ply+Lam&ll=23.0064904,72.5514704&z=17&output=embed",
+  mapsUrl:
+    "https://www.google.com/maps/place/Raj+Ply+Lam/@23.0064904,72.5514704,17z/data=!3m1!4b1!4m6!3m5!1s0x395e85d20217d655:0xd953b8004ba0b064!8m2!3d23.0064904!4d72.5514704!16s%2Fg%2F11q83hb5qn?entry=ttu&g_ep=EgoyMDI2MDgxOS4wIKXMDSoASAFQAw%3D%3D",
 };
 
 export const WHATSAPP_MESSAGE =
