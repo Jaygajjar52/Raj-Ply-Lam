@@ -9,8 +9,8 @@ const CARDS = [
     label: "Visit Us",
     lines: [COMPANY.address.line1, COMPANY.address.line2, COMPANY.address.city],
   },
-  { icon: Phone, label: "Call Us", lines: [COMPANY.phone] },
-  { icon: Mail, label: "Email Us", lines: [COMPANY.email] },
+  { icon: Phone, label: "Call Us", lines: [COMPANY.phone], href: `tel:${COMPANY.phoneRaw}` },
+  { icon: Mail, label: "Email Us", lines: [COMPANY.email], href: `mailto:${COMPANY.email}` },
   {
     icon: Clock,
     label: "Business Hours",
@@ -37,11 +37,21 @@ export function Contact() {
                 <card.icon size={18} className="text-wood" />
               </span>
               <p className="font-display text-cream font-semibold mb-2">{card.label}</p>
-              {card.lines.map((line) => (
-                <p key={line} className="text-sm text-beige/65 leading-relaxed">
-                  {line}
-                </p>
-              ))}
+              {card.lines.map((line) =>
+                card.href ? (
+                  <a
+                    key={line}
+                    href={card.href}
+                    className="block text-sm text-beige/65 leading-relaxed transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-2 focus-visible:ring-offset-wood rounded-sm"
+                  >
+                    {line}
+                  </a>
+                ) : (
+                  <p key={line} className="text-sm text-beige/65 leading-relaxed">
+                    {line}
+                  </p>
+                ),
+              )}
             </motion.div>
           ))}
         </div>
