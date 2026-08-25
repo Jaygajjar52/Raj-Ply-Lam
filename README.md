@@ -7,6 +7,8 @@ The project also includes a **private admin dashboard** where the business owner
 ---
 
 ## ✨ What This Project Does
+<img width="1137" height="912" alt="Screenshot 2026-08-25 124653" src="https://github.com/user-attachments/assets/c98aac98-6837-4024-9c13-e6e1d6acf336" />
+
 
 The workflow is simple:
 
