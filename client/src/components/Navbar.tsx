@@ -19,10 +19,30 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const handleNavClick = (href: string) => {
-    setMobileOpen(false);
-    const el = document.querySelector(href);
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const scrollToSection = (href: string) => {
+    const targetId = href.startsWith("#") ? href.slice(1) : href;
+    const el = document.getElementById(targetId);
+    if (!el) return;
+
+    const header = document.querySelector("header");
+    const headerOffset = (header?.getBoundingClientRect().height ?? 72) + 12;
+    const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    window.scrollTo({
+      top: Math.max(0, top),
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  };
+
+  const handleNavClick = (href: string, fromMobile = false) => {
+    if (fromMobile) {
+      setMobileOpen(false);
+      window.setTimeout(() => scrollToSection(href), 275);
+      return;
+    }
+
+    scrollToSection(href);
   };
 
   return (
@@ -94,7 +114,7 @@ export function Navbar() {
                   href={link.href}
                   onClick={(e) => {
                     e.preventDefault();
-                    handleNavClick(link.href);
+                    handleNavClick(link.href, true);
                   }}
                   className="py-3 text-beige/85 border-b border-white/5 text-sm font-medium"
                 >
